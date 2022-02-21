@@ -1,9 +1,22 @@
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
+SCHEMA_MICRO = {
+    "postal_code":"44330",
+    "service":"REDPACK ECOEXPRESS",
+    "delivery_type":"DOMICILIO",
+    "extended_area":"False",
+    "coverage":"True"
+}
+
+REDPACKECONOMICO = 'REDPACK ECOEXPRESS'
+REDPACKEXPRESS = 'REDPACK EXPRESS'
+OCURRE = 'SUCURSAL'
+DOMICILIO = 'DOMICILIO'
+NORMAL = 'NORMAL'
 
 with sync_playwright() as p:
-    cpDestination='45430'
+    cpDestination='44330'
     browser = p.chromium.launch(headless=True, slow_mo=100)
     
     # is open navigator and page
@@ -16,7 +29,7 @@ with sync_playwright() as p:
     
     page.click("button#cobertura_enviar")
     
-    page.wait_for_timeout(5000)
+    page.wait_for_timeout(10000)
     
     
     verifyCp = '[id="cobertura_error"]'
@@ -67,15 +80,42 @@ with sync_playwright() as p:
         detail = str(t)
         types_deliverys.append(detail[3:len(detail)-4])
     
-    schema = ({
+    schema = {
         'coverage':coverages,
         'deliverys':deliverys,
         'types_deliverys':types_deliverys,
         'Error':False
-    })
+    }
     
+    arrayschema = []
     
-    print(schema)
-    page.screenshot(path=f"screenshots/{cpDestination}.png", full_page=True)
+    if not coverages:
+        print('No tuvimos resultados')
+    
+    for type_coverage in coverages:
+        if type_coverage == 'ECOEXPRESS':
+            over_write_data = {
+                **SCHEMA_MICRO.copy(),
+                "postal_code": cpDestination,
+                "service":  REDPACKECONOMICO,
+                "delivery_type": DOMICILIO if DOMICILIO in deliverys else OCURRE,
+                "extended_area":False if NORMAL in types_deliverys else True,
+                "coverage":True
+            }
+            arrayschema.append(over_write_data)
+        elif type_coverage == 'EXPRESS':
+            over_write_data = {
+                **SCHEMA_MICRO.copy(),
+                "postal_code": cpDestination,
+                "service":  REDPACKEXPRESS,
+                "delivery_type": DOMICILIO if DOMICILIO in deliverys else OCURRE,
+                "extended_area":False if NORMAL in types_deliverys else True,
+                "coverage":True
+            }
+            arrayschema.append(over_write_data)
+        # print(over_write_data)    
+    print(arrayschema)
+    # print(schema)
+    # page.screenshot(path=f"screenshots/{cpDestination}.png", full_page=True)
     page.close()
     browser.close()
